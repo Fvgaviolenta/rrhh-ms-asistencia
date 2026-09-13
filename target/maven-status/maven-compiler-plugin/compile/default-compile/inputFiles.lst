@@ -1,0 +1,17 @@
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\AsistenciaApplication.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\config\CorsConfig.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\config\LocalJwtConfig.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\config\SecurityConfig.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\controller\MarcaAsistenciaController.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\dto\ApiResponse.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\dto\response\MarcaAsistenciaResponse.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\exception\DomainException.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\exception\GlobalExceptionHandler.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\model\MarcaAsistencia.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\model\TipoMarca.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\repository\MarcaAsistenciaRepository.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\security\JwtTenantConverter.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\security\Roles.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\security\TenantCleanupFilter.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\security\TenantContext.java
+C:\Users\alfon\Desktop\INGENIERIA_INFORMATICA_DUOC\SEXTO-SEMESTRE\desarrollo-cloud-native\PROYECTO\rrhh-asistencia\backend\src\main\java\com\rrhh\asistencia\service\MarcaAsistenciaService.java
