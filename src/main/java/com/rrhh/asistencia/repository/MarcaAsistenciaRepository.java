@@ -9,20 +9,21 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface MarcaAsistenciaRepository extends JpaRepository<MarcaAsistencia, String> {
     List<MarcaAsistencia> findByTenantIdAndActivoTrueOrderByFechaHoraDesc(String tenantId);
 
-    List<MarcaAsistencia> findByTrabajadorIdAndActivoTrueOrderByFechaHoraDesc(String trabajadorId);
+    List<MarcaAsistencia> findByTenantIdAndTrabajadorIdAndActivoTrueOrderByFechaHoraDesc(
+            String tenantId, String trabajadorId);
 
-    Optional<MarcaAsistencia> findFirstByTrabajadorIdAndActivoTrueOrderByFechaHoraDesc(String trabajadorId);
-
-    List<MarcaAsistencia> findByTrabajadorIdAndFechaHoraBetweenAndActivoTrue(
+    List<MarcaAsistencia> findByTenantIdAndTrabajadorIdAndFechaHoraBetweenAndActivoTrue(
+            String tenantId,
             String trabajadorId,
             Instant fechaInicio,
             Instant fechaFin
     );
+
+    java.util.Optional<MarcaAsistencia> findByIdAndTenantId(String id, String tenantId);
 
     @Query("SELECT m FROM MarcaAsistencia m WHERE m.tenantId = :tenantId AND m.activo = true " +
            "AND DATE(m.fechaHora) = :fecha ORDER BY m.fechaHora DESC")
