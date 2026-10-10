@@ -32,7 +32,11 @@ public class MarcaAsistenciaService {
     }
 
     public List<MarcaAsistenciaResponse> listarPorTenant() {
-        String tenantId = tenantContext.require().tenantId();
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        if (Roles.TRABAJADOR.equals(Roles.authorityFromClaim(actor.role()))) {
+            throw new DomainException(403, "Un trabajador no puede listar la asistencia del tenant");
+        }
+        String tenantId = actor.tenantId();
         return marcaAsistenciaRepository.findByTenantIdAndActivoTrueOrderByFechaHoraDesc(tenantId)
                 .stream()
                 .map(this::toResponse)
