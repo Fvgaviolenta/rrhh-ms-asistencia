@@ -13,8 +13,6 @@ import com.rrhh.asistencia.security.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -23,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class MarcaAsistenciaService {
+    private static final ZoneId ZONA = ZoneId.of("America/Santiago");
+
     private final MarcaAsistenciaRepository marcaAsistenciaRepository;
     private final TenantContext tenantContext;
 
@@ -32,60 +32,41 @@ public class MarcaAsistenciaService {
     }
 
     public List<MarcaAsistenciaResponse> listarPorTenant() {
-        TenantContext.AuthenticatedUser actor = tenantContext.require();
-        if (Roles.TRABAJADOR.equals(Roles.authorityFromClaim(actor.role()))) {
-            throw new DomainException(403, "Un trabajador no puede listar la asistencia del tenant");
-        }
-        String tenantId = actor.tenantId();
+        String tenantId = tenantContext.require().tenantId();
         return marcaAsistenciaRepository.findByTenantIdAndActivoTrueOrderByFechaHoraDesc(tenantId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
-    }
-
-    public List<MarcaAsistenciaResponse> listarPorTenantPlataforma(String tenantId) {
-        exigirOperadorSaas();
-        return marcaAsistenciaRepository.findByTenantIdAndActivoTrueOrderByFechaHoraDesc(tenantId)
-                .stream().map(this::toResponse).toList();
     }
 
     public List<MarcaAsistenciaResponse> listarPorTrabajador(String trabajadorId) {
         String tenantId = tenantContext.require().tenantId();
-        validarAccesoTrabajador(trabajadorId);
-        return marcaAsistenciaRepository.findByTenantIdAndTrabajadorIdAndActivoTrueOrderByFechaHoraDesc(tenantId, trabajadorId)
+        return marcaAsistenciaRepository
+                .findByTenantIdAndTrabajadorIdAndActivoTrueOrderByFechaHoraDesc(tenantId, trabajadorId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public MarcaAsistenciaResponse obtenerMarcaHoy(String trabajadorId) {
+    public MarcaAsistenciaResponse marcaDeHoy(String trabajadorId) {
         String tenantId = tenantContext.require().tenantId();
-        validarAccesoTrabajador(trabajadorId);
-        LocalDate hoy = LocalDate.now(ZoneId.of("America/Santiago"));
-        
-        List<MarcaAsistencia> marcasHoy = marcaAsistenciaRepository.findByTenantIdAndTrabajadorIdAndFechaHoraBetweenAndActivoTrue(
-                tenantId,
-                trabajadorId,
-                hoy.atStartOfDay(ZoneId.of("America/Santiago")).toInstant(),
-                hoy.plusDays(1).atStartOfDay(ZoneId.of("America/Santiago")).toInstant()
-        );
-        
-        if (marcasHoy.isEmpty()) {
-            throw new DomainException(404, "No hay marcas registradas hoy para este trabajador");
-        }
-        
-        return toResponse(marcasHoy.get(0));
+        LocalDate hoy = LocalDate.now(ZONA);
+        Instant desde = hoy.atStartOfDay(ZONA).toInstant();
+        Instant hasta = hoy.plusDays(1).atStartOfDay(ZONA).toInstant();
+        return marcaAsistenciaRepository
+                .findByTenantIdAndTrabajadorIdAndActivoTrueAndFechaHoraBetweenOrderByFechaHoraDesc(tenantId, trabajadorId, desde, hasta)
+                .stream()
+                .findFirst()
+                .map(this::toResponse)
+                .orElse(null);
     }
 
     public List<MarcaAsistenciaResponse> listarPorPeriodo(String trabajadorId, LocalDate fechaInicio, LocalDate fechaFin) {
         String tenantId = tenantContext.require().tenantId();
-        validarAccesoTrabajador(trabajadorId);
-        
-        Instant inicio = fechaInicio.atStartOfDay(ZoneId.of("America/Santiago")).toInstant();
-        Instant fin = fechaFin.plusDays(1).atStartOfDay(ZoneId.of("America/Santiago")).toInstant();
-        
-        return marcaAsistenciaRepository.findByTenantIdAndTrabajadorIdAndFechaHoraBetweenAndActivoTrue(
-                tenantId, trabajadorId, inicio, fin)
+        Instant desde = fechaInicio.atStartOfDay(ZONA).toInstant();
+        Instant hasta = fechaFin.plusDays(1).atStartOfDay(ZONA).toInstant();
+        return marcaAsistenciaRepository
+                .findByTenantIdAndTrabajadorIdAndActivoTrueAndFechaHoraBetweenOrderByFechaHoraDesc(tenantId, trabajadorId, desde, hasta)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -93,97 +74,46 @@ public class MarcaAsistenciaService {
 
     @Transactional
     public MarcaAsistenciaResponse registrar(RegistrarMarcaRequest request) {
-        String tenantId = tenantContext.require().tenantId();
-        validarAccesoTrabajador(request.trabajadorId());
-        
-        // Validar que no exista una marca del mismo tipo en los últimos 5 minutos
-        Instant hace5Minutos = Instant.now().minusSeconds(300);
-        List<MarcaAsistencia> marcasRecientes = marcaAsistenciaRepository
-                .findByTenantIdAndTrabajadorIdAndFechaHoraBetweenAndActivoTrue(
-                        tenantId,
-                        request.trabajadorId(),
-                        hace5Minutos,
-                        Instant.now()
-                );
-        
-        TipoMarca tipoEnum = TipoMarca.valueOf(request.tipo().name());
-        
-        boolean marcaDuplicada = marcasRecientes.stream()
-                .anyMatch(m -> m.getTipo() == tipoEnum);
-        
-        if (marcaDuplicada) {
-            throw new DomainException(409, "Ya existe una marca de " + request.tipo().name().toLowerCase() + " registrada recientemente");
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        String authority = Roles.authorityFromClaim(actor.role());
+        if (Roles.TRABAJADOR.equals(authority) && !request.trabajadorId().equals(actor.trabajadorId())) {
+            throw new DomainException(403, "Un trabajador solo registra su propia marca");
         }
-        
         MarcaAsistencia marca = new MarcaAsistencia();
         marca.setId(UUID.randomUUID().toString());
-        marca.setTenantId(tenantId);
+        marca.setTenantId(actor.tenantId());
         marca.setTrabajadorId(request.trabajadorId());
-        marca.setTipo(tipoEnum);
+        marca.setTipo(request.tipo());
         marca.setFechaHora(Instant.now());
-        marca.setOrigen(request.origen());
+        marca.setOrigen(request.origen().trim());
         marca.setActivo(true);
         marca.setCreadoEn(Instant.now());
-        
-        marcaAsistenciaRepository.save(marca);
-        
-        return toResponse(marca);
+        return toResponse(marcaAsistenciaRepository.save(marca));
     }
 
     @Transactional
     public MarcaAsistenciaResponse editar(String marcaId, EditarMarcaRequest request) {
-        String tenantId = tenantContext.require().tenantId();
-        
-        MarcaAsistencia marca = marcaAsistenciaRepository.findByIdAndTenantId(marcaId, tenantId)
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        String authority = Roles.authorityFromClaim(actor.role());
+        if (!Roles.ADMIN_RRHH.equals(authority) && !Roles.SUPERADMIN.equals(authority)) {
+            throw new DomainException(403, "Solo Admin de RRHH edita marcas");
+        }
+        MarcaAsistencia marca = marcaAsistenciaRepository.findByIdAndTenantIdAndActivoTrue(marcaId, actor.tenantId())
                 .orElseThrow(() -> new DomainException(404, "Marca no encontrada"));
-        
-        // TODO: Guardar valor anterior para auditoría en audit_log
-        // Instant fechaHoraAnterior = marca.getFechaHora();
-        
         marca.setFechaHora(request.fechaHora());
-        marcaAsistenciaRepository.save(marca);
-        
-        // TODO: Publicar evento de edición para auditoría en RabbitMQ
-        
-        return toResponse(marca);
+        marca.setMotivoEdicion(request.motivo().trim());
+        return toResponse(marcaAsistenciaRepository.save(marca));
     }
 
     public AsistenciaResumenResponse resumen(LocalDate fechaInicio, LocalDate fechaFin) {
         String tenantId = tenantContext.require().tenantId();
-        
-        // Calcular resumen por día
-        LocalDate fechaActual = fechaInicio;
-        long totalMarcas = 0;
-        long totalEntradas = 0;
-        long totalSalidas = 0;
-        
-        while (!fechaActual.isAfter(fechaFin)) {
-            totalMarcas += marcaAsistenciaRepository.countByTenantIdAndFechaAndActivoTrue(tenantId, fechaActual);
-            totalEntradas += marcaAsistenciaRepository.countByTenantIdAndFechaAndTipoAndActivoTrue(
-                    tenantId, fechaActual, TipoMarca.ENTRADA);
-            totalSalidas += marcaAsistenciaRepository.countByTenantIdAndFechaAndTipoAndActivoTrue(
-                    tenantId, fechaActual, TipoMarca.SALIDA);
-            fechaActual = fechaActual.plusDays(1);
-        }
-        
-        // TODO: Obtener total de trabajadores activos del tenant
-        long totalTrabajadores = 0; // Pendiente: llamar a MS Trabajadores
-        
-        // Calcular porcentaje de asistencia
-        BigDecimal porcentajeAsistencia = totalTrabajadores > 0 
-                ? BigDecimal.valueOf(totalEntradas)
-                        .multiply(BigDecimal.valueOf(100))
-                        .divide(BigDecimal.valueOf(totalTrabajadores * (long)(fechaFin.toEpochDay() - fechaInicio.toEpochDay() + 1)), 2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
-        
-        return new AsistenciaResumenResponse(
-                fechaInicio,
-                totalTrabajadores,
-                totalMarcas,
-                totalEntradas,
-                totalSalidas,
-                porcentajeAsistencia
-        );
+        Instant desde = fechaInicio.atStartOfDay(ZONA).toInstant();
+        Instant hasta = fechaFin.plusDays(1).atStartOfDay(ZONA).toInstant();
+        List<MarcaAsistencia> marcas = marcaAsistenciaRepository.findByTenantIdAndActivoTrueAndFechaHoraBetween(tenantId, desde, hasta);
+        long entradas = marcas.stream().filter(m -> m.getTipo() == TipoMarca.ENTRADA).count();
+        long salidas = marcas.stream().filter(m -> m.getTipo() == TipoMarca.SALIDA).count();
+        double porcentaje = marcas.isEmpty() ? 0 : (entradas * 100.0) / marcas.size();
+        return new AsistenciaResumenResponse(fechaInicio, marcas.size(), entradas, salidas, porcentaje);
     }
 
     private MarcaAsistenciaResponse toResponse(MarcaAsistencia marca) {
@@ -197,19 +127,5 @@ public class MarcaAsistenciaService {
                 marca.isActivo(),
                 marca.getCreadoEn()
         );
-    }
-
-    private void exigirOperadorSaas() {
-        if (!Roles.OPERADOR_SAAS.equals(Roles.authorityFromClaim(tenantContext.current().role()))) {
-            throw new DomainException(403, "Acceso exclusivo para el operador SaaS");
-        }
-    }
-
-    private void validarAccesoTrabajador(String trabajadorId) {
-        TenantContext.AuthenticatedUser actor = tenantContext.require();
-        if (Roles.TRABAJADOR.equals(Roles.authorityFromClaim(actor.role()))
-                && (actor.trabajadorId() == null || !actor.trabajadorId().equals(trabajadorId))) {
-            throw new DomainException(403, "No puede acceder a la asistencia de otro trabajador");
-        }
     }
 }

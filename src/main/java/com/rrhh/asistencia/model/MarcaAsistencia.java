@@ -34,4 +34,6 @@ public class MarcaAsistencia {
     private boolean activo = true;
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
+    @Column(name = "motivo_edicion", length = 500)
+    private String motivoEdicion;
 }
