@@ -1,0 +1,20 @@
+CREATE TABLE asistencia_hora_extra (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    tenant_id CHAR(36) NOT NULL,
+    trabajador_id CHAR(36) NOT NULL,
+    fecha DATE NOT NULL,
+    periodo VARCHAR(7) NOT NULL,
+    tipo VARCHAR(30) NOT NULL,
+    cantidad_horas DECIMAL(6,2) NOT NULL,
+    valor_hora DECIMAL(14,2) NOT NULL,
+    recargo_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 0,
+    monto_total DECIMAL(14,2) NOT NULL,
+    motivo VARCHAR(500) NOT NULL,
+    estado VARCHAR(40) NOT NULL,
+    aprobado_por CHAR(36) NULL,
+    aprobado_en DATETIME NULL,
+    liquidacion_id CHAR(36) NULL,
+    creado_por CHAR(36) NOT NULL,
+    creado_en DATETIME NOT NULL,
+    INDEX idx_hora_extra_periodo (tenant_id, trabajador_id, periodo, estado)
+);
