@@ -32,6 +32,13 @@ public class MarcaAsistenciaController {
         return ApiResponse.ok(marcaAsistenciaService.listarPorTenant(), "Marcas de asistencia del tenant");
     }
 
+    @GetMapping("/plataforma/tenants/{tenant_id}/asistencia")
+    @PreAuthorize("hasRole('OPERADOR_SAAS')")
+    public ApiResponse<List<MarcaAsistenciaResponse>> listarPorTenantPlataforma(
+            @PathVariable("tenant_id") String tenantId) {
+        return ApiResponse.ok(marcaAsistenciaService.listarPorTenantPlataforma(tenantId), "Asistencia del tenant solicitado");
+    }
+
     @GetMapping("/asistencia/trabajador/{trabajador_id}")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<MarcaAsistenciaResponse>> listarPorTrabajador(
@@ -68,7 +75,7 @@ public class MarcaAsistenciaController {
     }
 
     @PutMapping("/asistencia/{marca_id}/editar")
-    @PreAuthorize("hasRole('" + Roles.ADMIN_RRHH + "')")
+    @PreAuthorize("hasRole('ADMIN_RRHH')")
     public ApiResponse<MarcaAsistenciaResponse> editar(
             @PathVariable("marca_id") String marcaId,
             @Valid @RequestBody EditarMarcaRequest request) {
@@ -76,7 +83,7 @@ public class MarcaAsistenciaController {
     }
 
     @GetMapping("/asistencia/resumen")
-    @PreAuthorize("hasRole('" + Roles.ADMIN_RRHH + "')")
+    @PreAuthorize("hasRole('ADMIN_RRHH')")
     public ApiResponse<AsistenciaResumenResponse> resumen(
             @RequestParam("fecha_inicio") LocalDate fechaInicio,
             @RequestParam("fecha_fin") LocalDate fechaFin) {

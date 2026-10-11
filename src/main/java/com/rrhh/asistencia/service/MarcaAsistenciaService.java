@@ -43,6 +43,12 @@ public class MarcaAsistenciaService {
                 .toList();
     }
 
+    public List<MarcaAsistenciaResponse> listarPorTenantPlataforma(String tenantId) {
+        exigirOperadorSaas();
+        return marcaAsistenciaRepository.findByTenantIdAndActivoTrueOrderByFechaHoraDesc(tenantId)
+                .stream().map(this::toResponse).toList();
+    }
+
     public List<MarcaAsistenciaResponse> listarPorTrabajador(String trabajadorId) {
         String tenantId = tenantContext.require().tenantId();
         validarAccesoTrabajador(trabajadorId);
@@ -191,6 +197,12 @@ public class MarcaAsistenciaService {
                 marca.isActivo(),
                 marca.getCreadoEn()
         );
+    }
+
+    private void exigirOperadorSaas() {
+        if (!Roles.OPERADOR_SAAS.equals(Roles.authorityFromClaim(tenantContext.current().role()))) {
+            throw new DomainException(403, "Acceso exclusivo para el operador SaaS");
+        }
     }
 
     private void validarAccesoTrabajador(String trabajadorId) {
