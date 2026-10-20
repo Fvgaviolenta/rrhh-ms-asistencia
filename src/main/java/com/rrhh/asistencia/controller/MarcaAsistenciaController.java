@@ -89,7 +89,7 @@ public class MarcaAsistenciaController {
     public Map<String, String> status() {
         return Map.of(
                 "servicio", "rrhh-asistencia",
-                "estado", "SCAFFOLD"
+                "estado", "OPERATIVO"
         );
     }
 }

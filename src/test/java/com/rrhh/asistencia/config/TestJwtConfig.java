@@ -20,7 +20,7 @@ public class TestJwtConfig {
                 .claims(c -> c.putAll(Map.of(
                         "email", "admin.demo@rrhh.local",
                         "custom:tenant_id", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                        "custom:role", "Admin de RRHH"
+                        "custom:role", token.endsWith("-trabajador") ? "Trabajador" : "Admin de RRHH"
                 )))
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))

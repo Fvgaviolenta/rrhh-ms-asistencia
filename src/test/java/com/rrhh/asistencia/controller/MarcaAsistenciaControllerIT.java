@@ -5,6 +5,7 @@ import com.rrhh.asistencia.AsistenciaApplication;
 import com.rrhh.asistencia.config.TestJwtConfig;
 import com.rrhh.asistencia.dto.request.EditarMarcaRequest;
 import com.rrhh.asistencia.dto.request.RegistrarMarcaRequest;
+import com.rrhh.asistencia.model.TipoMarca;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -68,7 +69,7 @@ class MarcaAsistenciaControllerIT {
     void registrarMarcaEntrada() throws Exception {
         RegistrarMarcaRequest request = new RegistrarMarcaRequest(
                 "test-trabajador-id",
-                RegistrarMarcaRequest.TipoMarcaEnum.ENTRADA,
+                TipoMarca.ENTRADA,
                 "APP_MOVIL"
         );
 
@@ -77,14 +78,14 @@ class MarcaAsistenciaControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.mensaje").value("Marca registrada exitosamente"));
+                .andExpect(jsonPath("$.mensaje").value("Marca registrada"));
     }
 
     @Test
     void registrarMarcaSalida() throws Exception {
         RegistrarMarcaRequest request = new RegistrarMarcaRequest(
                 "test-trabajador-id",
-                RegistrarMarcaRequest.TipoMarcaEnum.SALIDA,
+                TipoMarca.SALIDA,
                 "APP_MOVIL"
         );
 
@@ -95,6 +96,17 @@ class MarcaAsistenciaControllerIT {
                 .andExpect(status().isCreated());
     }
 
+    private String registrarMarcaDePrueba() throws Exception {
+        RegistrarMarcaRequest registro = new RegistrarMarcaRequest("test-trabajador-id", TipoMarca.ENTRADA, "APP_MOVIL");
+        String respuesta = mockMvc.perform(post("/api/v1/asistencia/registro")
+                        .header("Authorization", "Bearer test-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registro)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(respuesta).path("datos").path("id").asText();
+    }
+
     @Test
     void editarMarca() throws Exception {
         EditarMarcaRequest request = new EditarMarcaRequest(
@@ -102,12 +114,14 @@ class MarcaAsistenciaControllerIT {
                 "Corrección manual"
         );
 
-        mockMvc.perform(put("/api/v1/asistencia/test-marca-id/editar")
+        String marcaId = registrarMarcaDePrueba();
+
+        mockMvc.perform(put("/api/v1/asistencia/" + marcaId + "/editar")
                         .header("Authorization", "Bearer test-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mensaje").value("Marca editada exitosamente"));
+                .andExpect(jsonPath("$.mensaje").value("Marca editada"));
     }
 
     @Test
@@ -131,7 +145,7 @@ class MarcaAsistenciaControllerIT {
     void registrarMarcaSinToken() throws Exception {
         RegistrarMarcaRequest request = new RegistrarMarcaRequest(
                 "test-trabajador-id",
-                RegistrarMarcaRequest.TipoMarcaEnum.ENTRADA,
+                TipoMarca.ENTRADA,
                 "APP_MOVIL"
         );
 
@@ -143,7 +157,7 @@ class MarcaAsistenciaControllerIT {
 
     @Test
     void editarMarcaSinPermisos() throws Exception {
-        // Este test asume que el token de test no tiene rol ADMIN_RRHH
+        // TestJwtConfig asigna el rol Trabajador a los tokens que terminan en "-trabajador"
         EditarMarcaRequest request = new EditarMarcaRequest(
                 Instant.now(),
                 "Motivo"

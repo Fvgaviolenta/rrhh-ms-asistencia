@@ -25,9 +25,9 @@ public class HoraExtra {
     @Column(name = "monto_total", nullable = false, precision = 14, scale = 2) private BigDecimal montoTotal;
     @Column(nullable = false, length = 500) private String motivo;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 40) private EstadoHoraExtra estado;
-    @Column(name = "aprobado_por", length = 36) private String aprobadoPor;
+    @Column(name = "aprobado_por", length = 36, columnDefinition = "CHAR(36)") private String aprobadoPor;
     @Column(name = "aprobado_en") private Instant aprobadoEn;
-    @Column(name = "liquidacion_id", length = 36) private String liquidacionId;
-    @Column(name = "creado_por", nullable = false, length = 36) private String creadoPor;
+    @Column(name = "liquidacion_id", length = 36, columnDefinition = "CHAR(36)") private String liquidacionId;
+    @Column(name = "creado_por", nullable = false, length = 36, columnDefinition = "CHAR(36)") private String creadoPor;
     @Column(name = "creado_en", nullable = false) private Instant creadoEn;
 }
