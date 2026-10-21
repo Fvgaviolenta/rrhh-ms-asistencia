@@ -32,7 +32,9 @@ public class MarcaAsistenciaService {
     }
 
     public List<MarcaAsistenciaResponse> listarPorTenant() {
-        String tenantId = tenantContext.require().tenantId();
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        exigirRolDeGestion(actor);
+        String tenantId = actor.tenantId();
         return marcaAsistenciaRepository.findByTenantIdAndActivoTrueOrderByFechaHoraDesc(tenantId)
                 .stream()
                 .map(this::toResponse)
@@ -40,7 +42,9 @@ public class MarcaAsistenciaService {
     }
 
     public List<MarcaAsistenciaResponse> listarPorTrabajador(String trabajadorId) {
-        String tenantId = tenantContext.require().tenantId();
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        exigirAccesoATrabajador(actor, trabajadorId);
+        String tenantId = actor.tenantId();
         return marcaAsistenciaRepository
                 .findByTenantIdAndTrabajadorIdAndActivoTrueOrderByFechaHoraDesc(tenantId, trabajadorId)
                 .stream()
@@ -49,7 +53,9 @@ public class MarcaAsistenciaService {
     }
 
     public MarcaAsistenciaResponse marcaDeHoy(String trabajadorId) {
-        String tenantId = tenantContext.require().tenantId();
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        exigirAccesoATrabajador(actor, trabajadorId);
+        String tenantId = actor.tenantId();
         LocalDate hoy = LocalDate.now(ZONA);
         Instant desde = hoy.atStartOfDay(ZONA).toInstant();
         Instant hasta = hoy.plusDays(1).atStartOfDay(ZONA).toInstant();
@@ -62,7 +68,9 @@ public class MarcaAsistenciaService {
     }
 
     public List<MarcaAsistenciaResponse> listarPorPeriodo(String trabajadorId, LocalDate fechaInicio, LocalDate fechaFin) {
-        String tenantId = tenantContext.require().tenantId();
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        exigirAccesoATrabajador(actor, trabajadorId);
+        String tenantId = actor.tenantId();
         Instant desde = fechaInicio.atStartOfDay(ZONA).toInstant();
         Instant hasta = fechaFin.plusDays(1).atStartOfDay(ZONA).toInstant();
         return marcaAsistenciaRepository
@@ -76,14 +84,24 @@ public class MarcaAsistenciaService {
     public MarcaAsistenciaResponse registrar(RegistrarMarcaRequest request) {
         TenantContext.AuthenticatedUser actor = tenantContext.require();
         String authority = Roles.authorityFromClaim(actor.role());
-        if (Roles.TRABAJADOR.equals(authority) && !request.trabajadorId().equals(actor.trabajadorId())) {
-            throw new DomainException(403, "Un trabajador solo registra su propia marca");
+        if (Roles.TRABAJADOR.equals(authority)) {
+            exigirTrabajadorVinculado(actor);
+            if (!request.trabajadorId().equals(actor.trabajadorId())) {
+                throw new DomainException(403, "Un trabajador solo registra su propia asistencia");
+            }
+            LocalDate hoy = LocalDate.now(ZONA);
+            Instant desde = hoy.atStartOfDay(ZONA).toInstant();
+            Instant hasta = hoy.plusDays(1).atStartOfDay(ZONA).toInstant();
+            if (marcaAsistenciaRepository.existsByTenantIdAndTrabajadorIdAndActivoTrueAndFechaHoraBetween(
+                    actor.tenantId(), actor.trabajadorId(), desde, hasta)) {
+                throw new DomainException(409, "Ya registraste tu asistencia de hoy");
+            }
         }
         MarcaAsistencia marca = new MarcaAsistencia();
         marca.setId(UUID.randomUUID().toString());
         marca.setTenantId(actor.tenantId());
         marca.setTrabajadorId(request.trabajadorId());
-        marca.setTipo(request.tipo());
+        marca.setTipo(Roles.TRABAJADOR.equals(authority) ? TipoMarca.ENTRADA : request.tipo());
         marca.setFechaHora(Instant.now());
         marca.setOrigen(request.origen().trim());
         marca.setActivo(true);
@@ -106,7 +124,9 @@ public class MarcaAsistenciaService {
     }
 
     public AsistenciaResumenResponse resumen(LocalDate fechaInicio, LocalDate fechaFin) {
-        String tenantId = tenantContext.require().tenantId();
+        TenantContext.AuthenticatedUser actor = tenantContext.require();
+        exigirRolDeGestion(actor);
+        String tenantId = actor.tenantId();
         Instant desde = fechaInicio.atStartOfDay(ZONA).toInstant();
         Instant hasta = fechaFin.plusDays(1).atStartOfDay(ZONA).toInstant();
         List<MarcaAsistencia> marcas = marcaAsistenciaRepository.findByTenantIdAndActivoTrueAndFechaHoraBetween(tenantId, desde, hasta);
@@ -127,5 +147,27 @@ public class MarcaAsistenciaService {
                 marca.isActivo(),
                 marca.getCreadoEn()
         );
+    }
+
+    private void exigirAccesoATrabajador(TenantContext.AuthenticatedUser actor, String trabajadorId) {
+        if (Roles.TRABAJADOR.equals(Roles.authorityFromClaim(actor.role()))) {
+            exigirTrabajadorVinculado(actor);
+            if (!actor.trabajadorId().equals(trabajadorId)) {
+                throw new DomainException(403, "Un trabajador solo puede consultar su propia asistencia");
+            }
+        }
+    }
+
+    private void exigirTrabajadorVinculado(TenantContext.AuthenticatedUser actor) {
+        if (actor.trabajadorId() == null || actor.trabajadorId().isBlank()) {
+            throw new DomainException(403, "La cuenta no está vinculada a un trabajador");
+        }
+    }
+
+    private void exigirRolDeGestion(TenantContext.AuthenticatedUser actor) {
+        String authority = Roles.authorityFromClaim(actor.role());
+        if (!Roles.ADMIN_RRHH.equals(authority) && !Roles.SUPERADMIN.equals(authority) && !Roles.JEFATURA.equals(authority)) {
+            throw new DomainException(403, "No tienes permisos para consultar la asistencia del equipo");
+        }
     }
 }

@@ -5,6 +5,7 @@ import com.rrhh.asistencia.AsistenciaApplication;
 import com.rrhh.asistencia.config.TestJwtConfig;
 import com.rrhh.asistencia.dto.request.EditarMarcaRequest;
 import com.rrhh.asistencia.dto.request.RegistrarMarcaRequest;
+import com.rrhh.asistencia.model.TipoMarca;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -68,7 +69,7 @@ class MarcaAsistenciaControllerIT {
     void registrarMarcaEntrada() throws Exception {
         RegistrarMarcaRequest request = new RegistrarMarcaRequest(
                 "test-trabajador-id",
-                RegistrarMarcaRequest.TipoMarcaEnum.ENTRADA,
+                TipoMarca.ENTRADA,
                 "APP_MOVIL"
         );
 
@@ -84,7 +85,7 @@ class MarcaAsistenciaControllerIT {
     void registrarMarcaSalida() throws Exception {
         RegistrarMarcaRequest request = new RegistrarMarcaRequest(
                 "test-trabajador-id",
-                RegistrarMarcaRequest.TipoMarcaEnum.SALIDA,
+                TipoMarca.SALIDA,
                 "APP_MOVIL"
         );
 
@@ -131,7 +132,7 @@ class MarcaAsistenciaControllerIT {
     void registrarMarcaSinToken() throws Exception {
         RegistrarMarcaRequest request = new RegistrarMarcaRequest(
                 "test-trabajador-id",
-                RegistrarMarcaRequest.TipoMarcaEnum.ENTRADA,
+                TipoMarca.ENTRADA,
                 "APP_MOVIL"
         );
 
