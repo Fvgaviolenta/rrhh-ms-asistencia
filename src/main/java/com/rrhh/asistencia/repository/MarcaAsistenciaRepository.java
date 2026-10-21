@@ -17,5 +17,8 @@ public interface MarcaAsistenciaRepository extends JpaRepository<MarcaAsistencia
 
     List<MarcaAsistencia> findByTenantIdAndActivoTrueAndFechaHoraBetween(String tenantId, Instant desde, Instant hasta);
 
+    boolean existsByTenantIdAndTrabajadorIdAndActivoTrueAndFechaHoraBetween(
+            String tenantId, String trabajadorId, Instant desde, Instant hasta);
+
     Optional<MarcaAsistencia> findByIdAndTenantIdAndActivoTrue(String id, String tenantId);
 }
