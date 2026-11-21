@@ -15,4 +15,6 @@ public interface JornadaRepository extends JpaRepository<Jornada, String> {
     Optional<Jornada> findByIdAndTenantId(String id, String tenantId);
 
     boolean existsByTenantIdAndTrabajadorIdAndFechaAndActivoTrue(String tenantId, String trabajadorId, LocalDate fecha);
+
+    Optional<Jornada> findFirstByTenantIdAndTrabajadorIdAndFechaAndActivoTrue(String tenantId, String trabajadorId, LocalDate fecha);
 }
