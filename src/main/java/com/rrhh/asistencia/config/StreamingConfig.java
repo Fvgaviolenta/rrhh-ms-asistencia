@@ -20,8 +20,10 @@ import software.amazon.awssdk.services.kinesis.KinesisClient;
 @Configuration
 public class StreamingConfig {
 
+    /** Un solo cliente, compartido por los eventos (RRHH_KINESIS_ENABLED) y la telemetría (RRHH_TELEMETRY_ENABLED). */
     @Bean(destroyMethod = "close")
-    @ConditionalOnProperty(prefix = "rrhh.kinesis", name = "enabled", havingValue = "true")
+    // Sin distinguir mayúsculas, igual que @ConditionalOnProperty(havingValue = "true") de los beans que lo usan.
+    @ConditionalOnExpression("'${rrhh.kinesis.enabled:false}'.equalsIgnoreCase('true') or '${rrhh.telemetry.enabled:false}'.equalsIgnoreCase('true')")
     KinesisClient kinesisClient(@Value("${rrhh.kinesis.region}") String region) {
         return KinesisClient.builder()
                 .region(Region.of(region))
@@ -37,7 +39,7 @@ public class StreamingConfig {
     }
 
     @Bean
-    @ConditionalOnExpression("'${rrhh.streaming.backend:}' == 'redis' and '${rrhh.kinesis.enabled:false}' != 'true'")
+    @ConditionalOnExpression("'${rrhh.streaming.backend:}' == 'redis' and !'${rrhh.kinesis.enabled:false}'.equalsIgnoreCase('true')")
     EventStreamPublisher redisEventStreamPublisher(StringRedisTemplate redis,
                                                    @Value("${rrhh.streaming.redis-stream-key:rrhh:events}") String streamKey,
                                                    @Value("${rrhh.streaming.redis-max-len:10000}") long maxLen) {

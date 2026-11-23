@@ -24,6 +24,12 @@ public class TenantContext {
         return user;
     }
 
+    /** El tenantId del usuario actual, o null si el request no se autenticó. Nunca lanza. */
+    public String tenantIdOrNull() {
+        AuthenticatedUser user = CURRENT.get();
+        return user == null ? null : user.tenantId();
+    }
+
     public void clear() { CURRENT.remove(); }
 
     public record AuthenticatedUser(String tenantId, String userId, String email, String role, String trabajadorId, String cognitoSub) {}
