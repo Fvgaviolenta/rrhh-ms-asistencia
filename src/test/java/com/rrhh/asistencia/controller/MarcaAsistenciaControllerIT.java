@@ -169,4 +169,13 @@ class MarcaAsistenciaControllerIT {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void rutaSinControladorResponde404() throws Exception {
+        mockMvc.perform(get("/api/v1/no-existe")
+                        .header("Authorization", "Bearer test-token"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value(404))
+                .andExpect(jsonPath("$.mensaje").value("Recurso no encontrado"));
+    }
 }
