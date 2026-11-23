@@ -178,4 +178,65 @@ class MarcaAsistenciaControllerIT {
                 .andExpect(jsonPath("$.codigo").value(404))
                 .andExpect(jsonPath("$.mensaje").value("Recurso no encontrado"));
     }
+
+    @Test
+    void metodoNoPermitidoResponde405ConAllow() throws Exception {
+        mockMvc.perform(delete("/api/v1/marcas-asistencia")
+                        .header("Authorization", "Bearer test-token"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", org.hamcrest.Matchers.containsString("GET")))
+                .andExpect(jsonPath("$.codigo").value(405))
+                .andExpect(jsonPath("$.mensaje").value("Método no permitido"));
+    }
+
+    @Test
+    void jsonMalFormadoResponde400() throws Exception {
+        mockMvc.perform(post("/api/v1/asistencia/registro")
+                        .header("Authorization", "Bearer test-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"trabajadorId\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400))
+                .andExpect(jsonPath("$.mensaje").value("Solicitud inválida"));
+    }
+
+    @Test
+    void parametroConTipoInvalidoResponde400() throws Exception {
+        mockMvc.perform(get("/api/v1/asistencia/trabajador/test-trabajador-id/periodo")
+                        .param("fecha_inicio", "no-es-fecha")
+                        .param("fecha_fin", "2024-01-31")
+                        .header("Authorization", "Bearer test-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400));
+    }
+
+    @Test
+    void parametroFaltanteResponde400() throws Exception {
+        mockMvc.perform(get("/api/v1/asistencia/trabajador/test-trabajador-id/periodo")
+                        .param("fecha_inicio", "2024-01-01")
+                        .header("Authorization", "Bearer test-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400));
+    }
+
+    @Test
+    void tipoDeContenidoNoSoportadoResponde415() throws Exception {
+        mockMvc.perform(post("/api/v1/asistencia/registro")
+                        .header("Authorization", "Bearer test-token")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hola"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.codigo").value(415));
+    }
+
+    @Test
+    void validacionFallidaMantieneLosErroresPorCampo() throws Exception {
+        mockMvc.perform(post("/api/v1/asistencia/registro")
+                        .header("Authorization", "Bearer test-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Validación fallida"))
+                .andExpect(jsonPath("$.errores[?(@.campo == 'trabajadorId')]").exists());
+    }
 }
