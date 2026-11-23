@@ -38,6 +38,15 @@ class TelemetriaConfigTest {
     }
 
     @Test
+    void lasBanderasNoDistinguenMayusculas() {
+        runner.withPropertyValues("rrhh.telemetry.enabled=TRUE", "rrhh.telemetry.stream-name=rrhh-api-telemetry")
+                .run(ctx -> assertThat(ctx).hasSingleBean(KinesisClient.class).hasSingleBean(TelemetriaPublisher.class));
+        runner.withPropertyValues("rrhh.kinesis.enabled=True", "rrhh.kinesis.stream-name=rrhh-events")
+                .run(ctx -> assertThat(ctx).hasSingleBean(KinesisClient.class)
+                        .getBean(EventStreamPublisher.class).isInstanceOf(KinesisEventStreamPublisher.class));
+    }
+
+    @Test
     void conLasDosBanderasElClienteEsUnoSolo() {
         runner.withPropertyValues("rrhh.telemetry.enabled=true", "rrhh.telemetry.stream-name=rrhh-api-telemetry",
                         "rrhh.kinesis.enabled=true", "rrhh.kinesis.stream-name=rrhh-events")

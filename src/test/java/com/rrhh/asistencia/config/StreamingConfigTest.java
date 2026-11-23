@@ -40,6 +40,12 @@ class StreamingConfigTest {
     }
 
     @Test
+    void kinesisEnMayusculasGanaSobreRedis() {
+        runner.withPropertyValues("rrhh.kinesis.enabled=True", "rrhh.kinesis.stream-name=rrhh-events", "rrhh.streaming.backend=redis")
+                .run(ctx -> assertThat(ctx).getBean(EventStreamPublisher.class).isInstanceOf(KinesisEventStreamPublisher.class));
+    }
+
+    @Test
     void kinesisSinNombreDeStreamNoArranca() {
         runner.withPropertyValues("rrhh.kinesis.enabled=true")
                 .run(ctx -> assertThat(ctx).hasFailed());

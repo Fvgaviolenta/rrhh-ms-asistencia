@@ -2,6 +2,7 @@ package com.rrhh.asistencia.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
 import software.amazon.awssdk.services.kinesis.model.PutRecordsRequest;
@@ -12,8 +13,10 @@ import software.amazon.awssdk.services.kinesis.model.PutRecordsResultEntry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,7 +31,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * lo descarta y lo cuenta. Un hilo propio ({@code telemetria-kinesis}, no el scheduler de Spring que usa
  * {@code OutboxPublisher}) envía con PutRecords cada {@link #INTERVALO}, o antes si la cola llega a
  * {@link #MAX_LOTE}. Si Kinesis falla, el lote o los registros con {@code errorCode} se descartan sin
- * reintento y se cuentan en un log WARN, sin contenido. No hay outbox.
+ * reintento y se cuentan en un log WARN con la causa (clase de la excepción o errorCode de Kinesis),
+ * sin contenido de los registros. No hay outbox.
  */
 public class TelemetriaPublisher implements AutoCloseable {
     public static final int CAPACIDAD = 5000;
@@ -44,6 +48,8 @@ public class TelemetriaPublisher implements AutoCloseable {
     private final Duration intervalo;
     private final AtomicLong descartados = new AtomicLong();
     private final AtomicLong descartesSinReportar = new AtomicLong();
+    // Causas de los descartes desde el último WARN: "cola llena", la clase de la excepción o el errorCode.
+    private final Set<String> causas = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean iniciado = new AtomicBoolean();
     private final AtomicBoolean envioDisparado = new AtomicBoolean();
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -68,6 +74,7 @@ public class TelemetriaPublisher implements AutoCloseable {
         if (!cola.offer(registro)) {
             descartados.incrementAndGet();
             descartesSinReportar.incrementAndGet();
+            causas.add("cola llena");
             return false;
         }
         if (iniciado.get() && cola.size() >= maxLote && envioDisparado.compareAndSet(false, true)) {
@@ -97,7 +104,9 @@ public class TelemetriaPublisher implements AutoCloseable {
         }
         long sinReportar = descartesSinReportar.getAndSet(0);
         if (sinReportar > 0) {
-            log.warn("Telemetría: {} registros descartados", sinReportar);
+            List<String> motivo = List.copyOf(causas);
+            causas.removeAll(motivo);
+            log.warn("Telemetría: {} registros descartados ({})", sinReportar, String.join(", ", motivo));
         }
         return aceptados;
     }
@@ -114,6 +123,7 @@ public class TelemetriaPublisher implements AutoCloseable {
         try {
             response = client.putRecords(PutRecordsRequest.builder().streamName(streamName).records(entries).build());
         } catch (RuntimeException e) {
+            causas.add(causa(e));
             return lote.size();
         }
         if (response.failedRecordCount() == null || response.failedRecordCount() == 0) return 0;
@@ -122,9 +132,23 @@ public class TelemetriaPublisher implements AutoCloseable {
         int rechazados = 0;
         for (int i = 0; i < lote.size(); i++) {
             PutRecordsResultEntry r = i < resultados.size() ? resultados.get(i) : null;
-            if (r == null || r.errorCode() != null) rechazados++;
+            if (r == null) {
+                causas.add("sin resultado de Kinesis");
+                rechazados++;
+            } else if (r.errorCode() != null) {
+                causas.add(r.errorCode());
+                rechazados++;
+            }
         }
         return rechazados;
+    }
+
+    // El código de error de AWS (AccessDeniedException, ResourceNotFoundException...) o la clase de la excepción.
+    private static String causa(RuntimeException e) {
+        if (e instanceof AwsServiceException aws && aws.awsErrorDetails() != null && aws.awsErrorDetails().errorCode() != null) {
+            return aws.awsErrorDetails().errorCode();
+        }
+        return e.getClass().getSimpleName();
     }
 
     public long descartados() {

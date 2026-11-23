@@ -82,11 +82,12 @@ class TelemetriaPublisherTest {
         assertThat(p.enviarPendientes()).isZero();
         verify(client, times(1)).putRecords(any(PutRecordsRequest.class));
         assertThat(p.descartados()).isEqualTo(2);
-        assertThat(out.getOut()).contains("WARN").contains("2").doesNotContain("/api/v1/asistencia/{marca_id}/editar");
+        assertThat(out.getOut()).contains("WARN").contains("2 registros descartados").contains("SdkClientException")
+                .doesNotContain("/api/v1/asistencia/{marca_id}/editar");
     }
 
     @Test
-    void registrosConErrorCodeSeDescartanSinReintento() {
+    void registrosConErrorCodeSeDescartanSinReintento(CapturedOutput out) {
         PutRecordsResultEntry bien = PutRecordsResultEntry.builder().sequenceNumber("1").shardId("s").build();
         PutRecordsResultEntry mal = PutRecordsResultEntry.builder().errorCode("ProvisionedThroughputExceededException").errorMessage("x").build();
         when(client.putRecords(any(PutRecordsRequest.class)))
@@ -97,6 +98,7 @@ class TelemetriaPublisherTest {
         assertThat(p.descartados()).isEqualTo(2);
         assertThat(p.enviarPendientes()).isZero();
         verify(client, times(1)).putRecords(any(PutRecordsRequest.class));
+        assertThat(out.getOut()).contains("2 registros descartados").contains("ProvisionedThroughputExceededException");
     }
 
     @Test
