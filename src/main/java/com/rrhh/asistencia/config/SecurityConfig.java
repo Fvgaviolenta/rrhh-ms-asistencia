@@ -2,6 +2,7 @@ package com.rrhh.asistencia.config;
 
 import com.rrhh.asistencia.security.JwtTenantConverter;
 import com.rrhh.asistencia.security.TenantCleanupFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +29,7 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTenantConverter converter, TenantCleanupFilter cleanup, CorsConfigurationSource corsConfigurationSource) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTenantConverter converter, TenantCleanupFilter cleanup, CorsConfigurationSource corsConfigurationSource, ObjectProvider<TelemetriaHttpFilter> telemetria) throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -39,6 +40,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .addFilterAfter(cleanup, UsernamePasswordAuthenticationFilter.class);
+        // Telemetría (fase 5): después de TenantCleanupFilter, para leer el tenant antes de que se limpie.
+        telemetria.ifAvailable(f -> http.addFilterAfter(f, TenantCleanupFilter.class));
         return http.build();
     }
 

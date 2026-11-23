@@ -57,6 +57,11 @@ rrhh:
     redis-stream-key: ${RRHH_STREAMING_REDIS_KEY:rrhh:events}
     redis-max-len: ${RRHH_STREAMING_REDIS_MAX_LEN:10000}
     publish-delay-ms: ${STREAMING_PUBLISH_DELAY_MS:5000}
+  # Telemetría de APIs (fase 5 de streaming, piloto en asistencia): un registro por request al stream
+  # rrhh-api-telemetry, de mejor esfuerzo y sin outbox. Con la bandera, TELEMETRY_STREAM_NAME vacío impide arrancar.
+  telemetry:
+    enabled: ${RRHH_TELEMETRY_ENABLED:false}
+    stream-name: ${TELEMETRY_STREAM_NAME:}
   security:
     jwt:
       role-claim: ${JWT_ROLE_CLAIM:custom:role}

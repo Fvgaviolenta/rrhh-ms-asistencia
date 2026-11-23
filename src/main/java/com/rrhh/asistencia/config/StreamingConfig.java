@@ -20,8 +20,9 @@ import software.amazon.awssdk.services.kinesis.KinesisClient;
 @Configuration
 public class StreamingConfig {
 
+    /** Un solo cliente, compartido por los eventos (RRHH_KINESIS_ENABLED) y la telemetría (RRHH_TELEMETRY_ENABLED). */
     @Bean(destroyMethod = "close")
-    @ConditionalOnProperty(prefix = "rrhh.kinesis", name = "enabled", havingValue = "true")
+    @ConditionalOnExpression("'${rrhh.kinesis.enabled:false}' == 'true' or '${rrhh.telemetry.enabled:false}' == 'true'")
     KinesisClient kinesisClient(@Value("${rrhh.kinesis.region}") String region) {
         return KinesisClient.builder()
                 .region(Region.of(region))
