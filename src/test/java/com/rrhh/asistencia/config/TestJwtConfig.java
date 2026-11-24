@@ -16,7 +16,7 @@ public class TestJwtConfig {
 
     /**
      * Tokens: "admin-suspendida" (Admin de RRHH de TENANT_SUSPENDIBLE), "admin-plataforma" (sin tenant),
-     * "admin-plataforma-con-tenant" (AdminPlataforma con un custom:tenant_id antiguo); cualquier otro es el
+     * "admin-plataforma-con-tenant" y "operador-con-tenant" (rol de plataforma con un custom:tenant_id antiguo); cualquier otro es el
      * Admin de RRHH del tenant demo, o Trabajador si termina en "-trabajador".
      */
     private static Map<String, Object> claims(String token) {
@@ -32,6 +32,10 @@ public class TestJwtConfig {
                     "email", "owner@gmail.com",
                     "custom:tenant_id", TENANT_SUSPENDIBLE,
                     "custom:role", "AdminPlataforma");
+            case "operador-con-tenant" -> Map.of(
+                    "email", "operador@rrhh.local",
+                    "custom:tenant_id", TENANT_SUSPENDIBLE,
+                    "custom:role", "OperadorSaaS");
             default -> Map.of(
                     "email", "admin.demo@rrhh.local",
                     "custom:tenant_id", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
