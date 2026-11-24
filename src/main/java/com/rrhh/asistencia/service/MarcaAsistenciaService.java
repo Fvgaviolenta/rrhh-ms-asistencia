@@ -97,6 +97,7 @@ public class MarcaAsistenciaService {
 
     @Transactional
     public MarcaAsistenciaResponse registrar(RegistrarMarcaRequest request) {
+        rechazarRolDePlataforma();
         TenantContext.AuthenticatedUser actor = tenantContext.require();
         String authority = Roles.authorityFromClaim(actor.role());
         if (Roles.TRABAJADOR.equals(authority)) {
@@ -191,6 +192,7 @@ public class MarcaAsistenciaService {
     }
 
     private void exigirAccesoATrabajador(TenantContext.AuthenticatedUser actor, String trabajadorId) {
+        rechazarRolDePlataforma();
         if (Roles.TRABAJADOR.equals(Roles.authorityFromClaim(actor.role()))) {
             exigirTrabajadorVinculado(actor);
             if (!actor.trabajadorId().equals(trabajadorId)) {
@@ -209,6 +211,17 @@ public class MarcaAsistenciaService {
         String authority = Roles.authorityFromClaim(actor.role());
         if (!Roles.ADMIN_RRHH.equals(authority) && !Roles.SUPERADMIN.equals(authority) && !Roles.JEFATURA.equals(authority)) {
             throw new DomainException(403, "No tienes permisos para consultar la asistencia del equipo");
+        }
+    }
+
+    /**
+     * Rutas abiertas a todo usuario autenticado: un rol de plataforma no registra ni lee marcas de una empresa
+     * (fuera de alcance de ADR-020), aunque su token conserve un custom:tenant_id antiguo.
+     */
+    private void rechazarRolDePlataforma() {
+        String authority = Roles.authorityFromClaim(tenantContext.current().role());
+        if (Roles.ADMIN_PLATAFORMA.equals(authority) || Roles.OPERADOR_SAAS.equals(authority)) {
+            throw new DomainException(403, "Acceso exclusivo para usuarios de la empresa");
         }
     }
 }
