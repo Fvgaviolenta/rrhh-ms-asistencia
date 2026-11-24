@@ -2,6 +2,7 @@ package com.rrhh.asistencia.config;
 
 import com.rrhh.asistencia.security.JwtTenantConverter;
 import com.rrhh.asistencia.security.TenantCleanupFilter;
+import com.rrhh.asistencia.security.TenantSuspendidoFilter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.util.StringUtils;
@@ -29,7 +31,7 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTenantConverter converter, TenantCleanupFilter cleanup, CorsConfigurationSource corsConfigurationSource, ObjectProvider<TelemetriaHttpFilter> telemetria) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTenantConverter converter, TenantCleanupFilter cleanup, TenantSuspendidoFilter suspendido, CorsConfigurationSource corsConfigurationSource, ObjectProvider<TelemetriaHttpFilter> telemetria) throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -39,7 +41,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
-                .addFilterAfter(cleanup, UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(cleanup, UsernamePasswordAuthenticationFilter.class)
+                // S6: después de validar el JWT (que llena el TenantContext), 403 si la empresa está suspendida.
+                .addFilterAfter(suspendido, BearerTokenAuthenticationFilter.class);
         // Telemetría (fase 5): después de TenantCleanupFilter, para leer el tenant antes de que se limpie.
         telemetria.ifAvailable(f -> http.addFilterAfter(f, TenantCleanupFilter.class));
         return http.build();
